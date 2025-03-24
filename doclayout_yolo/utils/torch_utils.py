@@ -462,7 +462,23 @@ class ModelEMA:
         if self.enabled:
             copy_attr(self.ema, model, include, exclude)
 
-
+def convert_to_fp16(model):
+    """Convert model to FP16 (half) precision.
+    
+    Args:
+        model (nn.Module): PyTorch model to convert to FP16.
+    
+    Returns:
+        (nn.Module): FP16 model.
+    """
+    for layer in model.modules():
+        if not isinstance(layer, (nn.BatchNorm2d, nn.SyncBatchNorm)):
+            try :
+                layer.half()
+            except Exception as e:
+                LOGGER.warning(f"Failed to convert layer {layer} to FP16. {e}")
+    return model
+    
 def strip_optimizer(f: Union[str, Path] = "best.pt", s: str = "") -> None:
     """
     Strip optimizer from 'f' to finalize training, optionally save as 's'.
@@ -483,21 +499,22 @@ def strip_optimizer(f: Union[str, Path] = "best.pt", s: str = "") -> None:
             strip_optimizer(f)
         ```
     """
-    x = torch.load(f, map_location=torch.device("cpu"))
+    x = torch.load(f, map_location=torch.device("cpu"), weights_only=False)  # load checkpoint
     if "model" not in x:
         LOGGER.info(f"Skipping {f}, not a valid Ultralytics model.")
         return
-
-    if hasattr(x["model"], "args"):
-        x["model"].args = dict(x["model"].args)  # convert from IterableSimpleNamespace to dict
+    model = x["model"]
+    if hasattr(model, "args"):
+        model.args = dict(model.args)  # convert from IterableSimpleNamespace to dict
     args = {**DEFAULT_CFG_DICT, **x["train_args"]} if "train_args" in x else None  # combine args
     if x.get("ema"):
-        x["model"] = x["ema"]  # replace model with ema
-    for k in "optimizer", "best_fitness", "ema", "updates":  # keys
+        model = x["ema"]  # replace model with ema
+    for k in ["optimizer", "best_fitness", "ema", "updates"]:  # keys
         x[k] = None
     x["epoch"] = -1
-    x["model"].half()  # to FP16
-    for p in x["model"].parameters():
+    model = convert_to_fp16(model)
+
+    for p in model.parameters():
         p.requires_grad = False
     x["train_args"] = {k: v for k, v in args.items() if k in DEFAULT_CFG_KEYS}  # strip non-default keys
     # x['model'].args = x['train_args']
