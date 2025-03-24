@@ -22,8 +22,8 @@ def check_train_batch_size(model, imgsz=640, amp=True):
     Returns:
         (int): Optimal batch size computed using the autobatch() function.
     """
-
-    with torch.cuda.amp.autocast(amp):
+    with torch.amp.autocast("cuda", amp):
+    #with torch.cuda.amp.autocast(amp):
         return autobatch(deepcopy(model).train(), imgsz)  # compute optimal batch size
 
 
