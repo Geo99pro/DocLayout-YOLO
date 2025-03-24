@@ -226,7 +226,7 @@ class BaseTrainer:
         torch.cuda.set_device(RANK)
         self.device = torch.device("cuda", RANK)
         # LOGGER.info(f'DDP info: RANK {RANK}, WORLD_SIZE {world_size}, DEVICE {self.device}')
-        os.environ["TORCH_NCCL_BLOCKING_WAIT"] = "1"  # set to enforce timeout
+        os.environ["NCCL_BLOCKING_WAIT"] = "1"  # set to enforce timeout
         dist.init_process_group(
             backend="nccl" if dist.is_nccl_available() else "gloo",
             timeout=timedelta(seconds=32400),  # 3 hours
@@ -377,16 +377,14 @@ class BaseTrainer:
                             x["momentum"] = np.interp(ni, xi, [self.args.warmup_momentum, self.args.momentum])
 
                 # Forward
-                if self.amp:
-                    #with torch.cuda.amp.autocast(self.amp):
-                    with torch.amp.autocast(device_type='cuda', dtype=torch.float16): #https://pytorch.org/docs/stable/amp.html#
-                        batch = self.preprocess_batch(batch)
-                        self.loss, self.loss_items = self.model(batch)
-                        if RANK != -1:
-                            self.loss *= world_size
-                        self.tloss = (
-                            (self.tloss * i + self.loss_items) / (i + 1) if self.tloss is not None else self.loss_items
-                        )
+                with torch.cuda.amp.autocast(self.amp):
+                    batch = self.preprocess_batch(batch)
+                    self.loss, self.loss_items = self.model(batch)
+                    if RANK != -1:
+                        self.loss *= world_size
+                    self.tloss = (
+                        (self.tloss * i + self.loss_items) / (i + 1) if self.tloss is not None else self.loss_items
+                    )
 
                 # Backward
                 self.scaler.scale(self.loss).backward()
