@@ -35,7 +35,7 @@ RUN ln -sf /usr/bin/python3.9 /usr/bin/python \
 RUN pip install huggingface-hub
 
 #if repository is local
-COPY ./DocLayout-YOLO ${HOME}/DocLayout-YOLO
+COPY . ${HOME}/DocLayout-YOLO
 WORKDIR ${HOME}/DocLayout-YOLO
 RUN pip install -e .
 
