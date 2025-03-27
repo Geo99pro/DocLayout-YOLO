@@ -43,5 +43,7 @@ RUN pip install -e .
 #RUN pip install doclayout-yolo
 
 WORKDIR ${HOME}
+#authorize reading and writing to the home directory
+RUN chmod -R 777 ${HOME}
 
 CMD [ "bash" ]
