@@ -19,6 +19,7 @@ import numpy as np
 import torch
 from torch import distributed as dist
 from torch import nn, optim
+import torch.amp
 
 from doclayout_yolo.cfg import get_cfg, get_save_dir
 from doclayout_yolo.data.utils import check_cls_dataset, check_det_dataset
@@ -377,16 +378,14 @@ class BaseTrainer:
                             x["momentum"] = np.interp(ni, xi, [self.args.warmup_momentum, self.args.momentum])
 
                 # Forward
-                if self.amp:
-                    with torch.amp.autocast(device_type="cuda", dtype=torch.float16): #https://pytorch.org/docs/stable/amp.html#
-                    #with torch.cuda.amp.autocast(self.amp):
-                        batch = self.preprocess_batch(batch)
-                        self.loss, self.loss_items = self.model(batch)
-                        if RANK != -1:
-                            self.loss *= world_size
-                        self.tloss = (
-                            (self.tloss * i + self.loss_items) / (i + 1) if self.tloss is not None else self.loss_items
-                        )
+                with torch.amp.autocast(device_type="cuda", enabled=self.amp): #https://pytorch.org/docs/stable/amp.html#
+                    batch = self.preprocess_batch(batch)
+                    self.loss, self.loss_items = self.model(batch)
+                    if RANK != -1:
+                        self.loss *= world_size
+                    self.tloss = (
+                        (self.tloss * i + self.loss_items) / (i + 1) if self.tloss is not None else self.loss_items
+                    )
 
                 # Backward
                 self.scaler.scale(self.loss).backward()
