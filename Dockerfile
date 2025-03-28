@@ -2,7 +2,7 @@
 FROM nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04 
 
 ENV DEBIAN_FRONTEND=noninteractive
-ENV HOME=/root
+ENV HOME=/DocLayout-YOLO-World
 
 # Install libraries and dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -31,8 +31,8 @@ RUN pip install --upgrade setuptools
 
 # Update Python symlink to point to Python 3.9
 RUN ln -sf /usr/bin/python3.9 /usr/bin/python \
-    && ln -sf /usr/bin/python3.9 /usr/bin/python3
-RUN pip install huggingface-hub
+    && ln -sf /usr/bin/python3.9 /usr/bin/python3 \
+    && pip install huggingface-hub
 
 #if repository is local
 COPY . ${HOME}/DocLayout-YOLO
