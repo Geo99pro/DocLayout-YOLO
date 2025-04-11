@@ -2,7 +2,6 @@
 FROM nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04 
 
 ENV DEBIAN_FRONTEND=noninteractive
-ENV HOME=/DocLayout-YOLO-World
 
 # Install libraries and dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -17,6 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tar \
     build-essential \
     libopenmpi-dev \
+    libcairo2-dev \
     pkg-config \
     cmake \
     libpoppler-cpp-dev \
@@ -34,16 +34,8 @@ RUN ln -sf /usr/bin/python3.9 /usr/bin/python \
     && ln -sf /usr/bin/python3.9 /usr/bin/python3 \
     && pip install huggingface-hub
 
-#if repository is local
-COPY . ${HOME}/DocLayout-YOLO
-WORKDIR ${HOME}/DocLayout-YOLO
-RUN pip install -e .
+COPY requirements.txt .
 
-# if want to use pip install from https://pypi.org/project/doclayout-yolo/
-#RUN pip install doclayout-yolo
-
-WORKDIR ${HOME}
-#authorize reading and writing to the home directory
-RUN chmod -R 777 ${HOME}
+RUN pip install -r requirements.txt
 
 CMD [ "bash" ]
